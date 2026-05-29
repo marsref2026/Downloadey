@@ -8,10 +8,11 @@ st.set_page_config(page_title="Downloadey", page_icon="📥")
 
 def inject_ads():
     ad_code = """<div style="text-align:center; margin: 10px 0;">
+        <p style="color: grey; font-size: 10px;">ADVERTISEMENT</p>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR-ID" crossorigin="anonymous"></script>
         <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-YOUR-ID" data-ad-slot="YOUR-SLOT" data-ad-format="auto"></ins>
         <script>(adsbygoogle = window.adsbygoogle || []).push({});</script></div>"""
-    components.html(ad_code, height=100)
+    components.html(ad_code, height=120)
 
 st.markdown("""
     <style>
@@ -40,20 +41,15 @@ choice = st.radio("FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=True)
 if st.button("DOWNLOAD NOW"):
     if url:
         try:
-            # ADVANCED STEALTH OPTIONS FOR 403 ERRORS
+            # FLEXIBLE OPTIONS
             ydl_opts = {
                 'outtmpl': '%(title)s.%(ext)s',
                 'cookiefile': 'cookies.txt',
                 'quiet': True,
                 'no_warnings': True,
-                # This makes the server mimic a real browser perfectly
                 'http_headers': {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                    'Accept-Language': 'en-us,en;q=0.5',
-                    'Sec-Fetch-Mode': 'navigate',
                 },
-                'nocheckcertificate': True,
             }
 
             if "MP3" in choice:
@@ -66,19 +62,32 @@ if st.button("DOWNLOAD NOW"):
                     }],
                 })
             else:
-                # Force a format that doesn't require complex merging to avoid 403s
-                ydl_opts['format'] = 'best[ext=mp4]/best'
+                # This says: "Get the best video and best audio and combine them, 
+                # OR get the best single file if that fails."
+                ydl_opts['format'] = 'bestvideo+bestaudio/best'
+                ydl_opts['merge_output_format'] = 'mp4'
 
-            with st.spinner('🚀 Cracking security... Please wait.'):
+            with st.spinner('🚀 Processing media streams...'):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
                     filename = ydl.prepare_filename(info)
+                    
+                    # Ensure filename is correct if it was merged into mp4
+                    if "MP4" in choice and not filename.endswith(".mp4"):
+                        base = os.path.splitext(filename)[0]
+                        if os.path.exists(base + ".mp4"):
+                            filename = base + ".mp4"
+                    
                     if "MP3" in choice:
                         filename = os.path.splitext(filename)[0] + ".mp3"
 
                 with open(filename, "rb") as f:
-                    st.success("CLEARED! DOWNLOAD READY.")
-                    st.download_button(label="⬇️ SAVE FILE", data=f, file_name=os.path.basename(filename))
+                    st.success("✅ DOWNLOAD READY!")
+                    st.download_button(
+                        label="⬇️ SAVE TO DEVICE",
+                        data=f,
+                        file_name=os.path.basename(filename)
+                    )
                 os.remove(filename)
 
         except Exception as e:
