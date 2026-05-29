@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 import yt_dlp
 import os
 
-# --- UI & ADS ---
+# --- UI CONFIG ---
 st.set_page_config(page_title="Downloadey", page_icon="📥")
 
 def inject_ads():
@@ -40,18 +40,16 @@ choice = st.radio("FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=True)
 if st.button("DOWNLOAD NOW"):
     if url:
         try:
-            # SAVE FILENAME TEMPLATE
-            out_tmpl = '%(title)s.%(ext)s'
-            
-            # UPDATED OPTIONS FOR MAXIMUM COMPATIBILITY
+            # 1. THE STEALTH CONFIGURATION
             ydl_opts = {
-                'outtmpl': out_tmpl,
+                'outtmpl': '%(title)s.%(ext)s',
                 'cookiefile': 'cookies.txt',
                 'quiet': True,
                 'no_warnings': True,
-                'noplaylist': True,
+                # Impersonate Android client to bypass 403 Forbidden
+                'extractor_args': {'youtube': {'player_client': ['android']}},
                 'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'User-Agent': 'com.google.android.youtube/19.29.37 (Linux; U; Android 11; en_US) gzip',
                 },
             }
 
@@ -65,42 +63,36 @@ if st.button("DOWNLOAD NOW"):
                     }],
                 })
             else:
-                # This string is the magic fix:
-                # 1. Try to get best video + best audio merged into MP4
-                # 2. If that fails, get the best single file that is ALREADY an MP4
-                # 3. If that fails, just get the 'best' of anything available.
-                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+                # Force standard mp4 if possible to reduce bandwidth and errors
+                ydl_opts['format'] = 'best[ext=mp4]/best'
 
-            with st.spinner('🚀 Analyzing and grabbing media...'):
+            with st.spinner('🚀 Bypassing security...'):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
-                    # We use get() because merged files might have different names than expected
                     filename = ydl.prepare_filename(info)
                     
-                    # Fix for potential extension changes during merging
-                    base, ext = os.path.splitext(filename)
-                    if "MP4" in choice and not os.path.exists(filename):
-                        if os.path.exists(base + ".mp4"):
-                            filename = base + ".mp4"
-                        elif os.path.exists(base + ".mkv"): # Sometimes yt-dlp merges to mkv
-                            filename = base + ".mkv"
-                    
+                    # Fix extension if it was converted
+                    base = os.path.splitext(filename)[0]
                     if "MP3" in choice:
                         filename = base + ".mp3"
+                    elif not filename.endswith(".mp4") and os.path.exists(base + ".mp4"):
+                        filename = base + ".mp4"
 
                 with open(filename, "rb") as f:
-                    st.success("✅ SUCCESS!")
+                    st.success("✅ BYPASSED! DOWNLOAD READY.")
                     st.download_button(
-                        label="⬇️ CLICK TO SAVE TO DEVICE",
+                        label="⬇️ SAVE TO DEVICE",
                         data=f,
                         file_name=os.path.basename(filename)
                     )
-                
-                # Cleanup to keep server fast
                 os.remove(filename)
 
         except Exception as e:
-            st.error(f"DOWNLOAD ERROR: {str(e)[:250]}")
+            error_msg = str(e)
+            if "403" in error_msg:
+                st.error("SYSTEM ERROR: YouTube is blocking this server's IP. Try refreshing your cookies.txt or try an Instagram/Facebook link instead.")
+            else:
+                st.error(f"DOWNLOAD ERROR: {error_msg[:250]}")
     else:
         st.warning("Please paste a URL")
 
