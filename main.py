@@ -1,14 +1,24 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import yt_dlp
 import os
 
-# --- 1. MODERN DESIGN CONFIGURATION ---
+# --- 1. CONFIG & ADS ---
 st.set_page_config(page_title="Downloadey", page_icon="📥")
 
-# Custom CSS for Background and 70% Opacity Overlay
+def inject_ads():
+    ad_code = """
+    <div style="text-align:center; margin: 10px 0;">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR-AD-CLIENT-ID" crossorigin="anonymous"></script>
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-YOUR-AD-CLIENT-ID" data-ad-slot="YOUR-AD-SLOT" data-ad-format="auto"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+    """
+    components.html(ad_code, height=100)
+
+# --- 2. UI DESIGN ---
 st.markdown("""
     <style>
-    /* Full Page Background with Image and 70% Black Overlay */
     .stApp {
         background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
                     url('https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1974&auto=format&fit=crop');
@@ -16,94 +26,57 @@ st.markdown("""
         background-position: center;
         background-attachment: fixed;
     }
-
-    /* Main Container Styling */
     .main-box {
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.6);
         padding: 30px;
         border-radius: 20px;
         border: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: center;
     }
-
-    /* Input Field Styling */
     .stTextInput > div > div > input {
         background-color: rgba(255, 255, 255, 0.1) !important;
         color: white !important;
         border-radius: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        padding: 15px !important;
-        font-size: 16px;
     }
-
-    /* Button Styling */
     .stButton > button {
         width: 100%;
-        background: white !important;
-        color: black !important;
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
         font-weight: 900 !important;
-        text-transform: uppercase;
-        letter-spacing: 1px;
         border-radius: 12px !important;
-        border: none !important;
-        height: 50px;
+        height: 55px;
         transition: 0.3s;
     }
-
     .stButton > button:hover {
-        background: #dddddd !important;
-        transform: scale(1.02);
+        background-color: #808080 !important;
+        color: #000000 !important;
     }
-
-    /* Radio Buttons / Choice Styling */
-    .stRadio label {
-        color: white !important;
-        font-weight: bold;
-    }
-
-    /* Titles */
-    h1 {
-        color: white !important;
-        font-weight: 800 !important;
-        text-align: center;
-        letter-spacing: -1px;
-    }
-    
-    p {
-        color: rgba(255, 255, 255, 0.7) !important;
-        text-align: center;
-    }
+    h1, p, label { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. THE APP INTERFACE ---
+# --- 3. APP LOGIC ---
 st.markdown('<div class="main-box">', unsafe_allow_html=True)
-
 st.title("DOWNLOADEY")
-st.write("The ultimate downloader for IG Reels, FB Videos, and YT Shorts.")
+st.write("Professional Media Downloader")
 
-# Spacer
-st.write("")
+inject_ads()
 
-url = st.text_input("", placeholder="PASTE LINK HERE (FB, IG, YT)...")
-
-st.write("")
-choice = st.radio("CHOOSE FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=True)
-
-st.write("")
+url = st.text_input("", placeholder="Paste Link (IG, FB, YT)...")
+choice = st.radio("FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=True)
 
 if st.button("DOWNLOAD NOW"):
     if url:
-        # GOOGLE ADS PLACEHOLDER (Monetization Trigger)
-        st.info("💰 ADVERTISEMENT: Checking content... (Ad Loading)")
-        
         try:
-            # Temporary folder for downloads
-            if not os.path.exists("downloads"):
-                os.makedirs("downloads")
-
+            # STEALTH OPTIONS TO PREVENT BLOCKS
             ydl_opts = {
-                'outtmpl': 'downloads/%(title)s.%(ext)s',
+                'outtmpl': '%(title)s.%(ext)s',
                 'quiet': True,
+                'no_warnings': True,
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                'referer': 'https://www.google.com/',
+                'nocheckcertificate': True,
+                'add_header': ['Accept-Language: en-US,en;q=0.9'],
             }
 
             if "MP3" in choice:
@@ -118,25 +91,30 @@ if st.button("DOWNLOAD NOW"):
             else:
                 ydl_opts['format'] = 'best'
 
-            with st.spinner('⚡ PROCESSING...'):
+            with st.spinner('⚡ Connecting to server...'):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
                     filename = ydl.prepare_filename(info)
                     
                     if "MP3" in choice:
-                        filename = filename.rsplit('.', 1)[0] + ".mp3"
+                        filename = os.path.splitext(filename)[0] + ".mp3"
 
                 with open(filename, "rb") as f:
-                    st.success("SUCCESS! DOWNLOAD READY")
+                    st.success("DOWNLOAD READY!")
                     st.download_button(
-                        label="⬇️ SAVE TO YOUR DEVICE",
+                        label="⬇️ SAVE FILE",
                         data=f,
                         file_name=os.path.basename(filename),
                         mime="video/mp4" if "MP4" in choice else "audio/mpeg"
                     )
+                
+                # Auto-delete from server after user gets it to save space
+                os.remove(filename)
+
         except Exception as e:
-            st.error("ERROR: Link is private or invalid.")
+            # THIS WILL TELL US THE REAL PROBLEM
+            st.error(f"DOWLOAD FAILED: {str(e)[:200]}")
     else:
-        st.warning("PLEASE PASTE A URL FIRST")
+        st.warning("Please paste a URL")
 
 st.markdown('</div>', unsafe_allow_html=True)
