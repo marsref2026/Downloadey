@@ -62,8 +62,8 @@ st.markdown("""
 
     /* THE BUTTON: Hover State (Grey Background, Black Text) */
     .stButton > button:hover {
-        background-color: #808080 !important; /* Grey */
-        color: #000000 !important;           /* Black Text */
+        background-color: #808080 !important; /* Grey background */
+        color: #000000 !important;           /* Black text */
         transform: scale(1.01);
     }
 
@@ -76,8 +76,7 @@ st.markdown("""
 st.markdown('<div class="main-box">', unsafe_allow_html=True)
 
 st.title("DOWNLOADEY")
-# UPDATED: Added TikTok and Douyin to the description
-st.write("Fast Downloader for IG, FB, YouTube, TikTok, and Douyin")
+st.write("Fast Downloader for IG, FB, and Twitter")
 
 inject_ads() # Top Ad
 
@@ -88,13 +87,11 @@ if st.button("DOWNLOAD NOW"):
     if url:
         st.info("💰 AD: Processing your media... (Please wait)")
         try:
-            # ydl_opts with bypass logic for 403 and Bot errors
+            # ydl_opts configured for IG, FB, and Twitter stability
             ydl_opts = {
                 'outtmpl': '%(title)s.%(ext)s',
                 'quiet': True,
                 'no_warnings': True,
-                'cookiefile': 'cookies.txt',  # Keep your cookies.txt on GitHub
-                'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
                 'http_headers': {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 }
@@ -110,20 +107,23 @@ if st.button("DOWNLOAD NOW"):
                     }],
                 })
             else:
-                # Optimized format string for multi-platform support
-                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+                # FB/IG/Twitter usually serve single files well
+                ydl_opts['format'] = 'bestvideo+bestaudio/best'
 
             with st.spinner('⚡ FETCHING MEDIA...'):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(url, download=True)
                     filename = ydl.prepare_filename(info)
                     
-                    # Fix extension for merged files or MP3s
+                    # Ensure filename is correct after possible post-processing
                     base = os.path.splitext(filename)[0]
                     if "MP3" in choice:
                         filename = base + ".mp3"
-                    elif os.path.exists(base + ".mp4"):
-                        filename = base + ".mp4"
+                    elif not os.path.exists(filename):
+                        if os.path.exists(base + ".mp4"):
+                            filename = base + ".mp4"
+                        elif os.path.exists(base + ".mkv"):
+                            filename = base + ".mkv"
 
                 with open(filename, "rb") as f:
                     st.success("✅ READY!")
@@ -133,7 +133,7 @@ if st.button("DOWNLOAD NOW"):
                         file_name=os.path.basename(filename),
                         mime="video/mp4" if "MP4" in choice else "audio/mpeg"
                     )
-                # Remove file from server after user downloads it
+                # Cleanup server space
                 os.remove(filename)
                 
             inject_ads() # Post-Download Ad
