@@ -76,7 +76,8 @@ st.markdown("""
 st.markdown('<div class="main-box">', unsafe_allow_html=True)
 
 st.title("DOWNLOADEY")
-st.write("Fast Downloader for IG, FB, and YouTube")
+# UPDATED: Added TikTok and Douyin to the description
+st.write("Fast Downloader for IG, FB, YouTube, TikTok, and Douyin")
 
 inject_ads() # Top Ad
 
@@ -85,13 +86,18 @@ choice = st.radio("CHOOSE FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=Tr
 
 if st.button("DOWNLOAD NOW"):
     if url:
-        st.info("💰 AD: Download starting... (Please wait)")
+        st.info("💰 AD: Processing your media... (Please wait)")
         try:
-            # ydl_opts using current directory to avoid server permission errors
+            # ydl_opts with bypass logic for 403 and Bot errors
             ydl_opts = {
                 'outtmpl': '%(title)s.%(ext)s',
                 'quiet': True,
                 'no_warnings': True,
+                'cookiefile': 'cookies.txt',  # Keep your cookies.txt on GitHub
+                'extractor_args': {'youtube': {'player_client': ['android', 'ios']}},
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                }
             }
 
             if "MP3" in choice:
@@ -104,16 +110,20 @@ if st.button("DOWNLOAD NOW"):
                     }],
                 })
             else:
-                ydl_opts['format'] = 'best'
+                # Optimized format string for multi-platform support
+                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
 
-            with st.spinner('⚡ PROCESSING MEDIA...'):
+            with st.spinner('⚡ FETCHING MEDIA...'):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # Extraction
                     info = ydl.extract_info(url, download=True)
                     filename = ydl.prepare_filename(info)
                     
+                    # Fix extension for merged files or MP3s
+                    base = os.path.splitext(filename)[0]
                     if "MP3" in choice:
-                        filename = os.path.splitext(filename)[0] + ".mp3"
+                        filename = base + ".mp3"
+                    elif os.path.exists(base + ".mp4"):
+                        filename = base + ".mp4"
 
                 with open(filename, "rb") as f:
                     st.success("✅ READY!")
@@ -123,11 +133,13 @@ if st.button("DOWNLOAD NOW"):
                         file_name=os.path.basename(filename),
                         mime="video/mp4" if "MP4" in choice else "audio/mpeg"
                     )
+                # Remove file from server after user downloads it
+                os.remove(filename)
+                
             inject_ads() # Post-Download Ad
 
         except Exception as e:
-            # Showing actual error to debug "Private/Invalid" issue
-            st.error(f"SYSTEM ERROR: {e}")
+            st.error(f"SYSTEM ERROR: {str(e)[:250]}")
     else:
         st.warning("PLEASE PASTE A URL FIRST")
 
