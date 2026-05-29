@@ -3,95 +3,57 @@ import streamlit.components.v1 as components
 import yt_dlp
 import os
 
-# --- 1. CONFIG & ADS LOGIC ---
+# --- UI CONFIG ---
 st.set_page_config(page_title="Downloadey", page_icon="📥")
 
 def inject_ads():
-    # Replace 'YOUR-AD-CLIENT-ID' with your real Google AdSense ID later
-    ad_code = """
-    <div style="text-align:center; margin: 10px 0;">
-        <p style="color: grey; font-size: 10px;">ADVERTISEMENT</p>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR-AD-CLIENT-ID" crossorigin="anonymous"></script>
-        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-YOUR-AD-CLIENT-ID" data-ad-slot="YOUR-AD-SLOT" data-ad-format="auto"></ins>
-        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-    </div>
-    """
-    components.html(ad_code, height=120)
+    ad_code = """<div style="text-align:center; margin: 10px 0;">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR-ID" crossorigin="anonymous"></script>
+        <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-YOUR-ID" data-ad-slot="YOUR-SLOT" data-ad-format="auto"></ins>
+        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script></div>"""
+    components.html(ad_code, height=100)
 
-# --- 2. MODERN UI WITH OVERLAY & HOVER BUTTON ---
 st.markdown("""
     <style>
-    /* Background with 70% Black Overlay */
     .stApp {
         background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
                     url('https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?q=80&w=1974&auto=format&fit=crop');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
+        background-size: cover; background-position: center; background-attachment: fixed;
     }
-
-    /* Main Container */
-    .main-box {
-        background-color: rgba(0, 0, 0, 0.6);
-        padding: 30px;
-        border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        text-align: center;
-    }
-
-    /* Input Field */
-    .stTextInput > div > div > input {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-        border-radius: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        padding: 15px !important;
-    }
-
-    /* THE BUTTON: Normal State (White) */
+    .main-box { background-color: rgba(0, 0, 0, 0.6); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
     .stButton > button {
-        width: 100%;
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        font-weight: 900 !important;
-        border-radius: 12px !important;
-        border: none !important;
-        height: 55px;
-        transition: 0.3s all ease;
+        width: 100%; background-color: #FFFFFF !important; color: #000000 !important;
+        font-weight: 900 !important; border-radius: 12px !important; height: 55px; transition: 0.3s;
     }
-
-    /* THE BUTTON: Hover State (Grey Background, Black Text) */
-    .stButton > button:hover {
-        background-color: #808080 !important; /* Grey */
-        color: #000000 !important;           /* Black Text */
-        transform: scale(1.01);
-    }
-
+    .stButton > button:hover { background-color: #808080 !important; color: #000000 !important; }
     h1, p, label { color: white !important; }
-    .stRadio label { font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. INTERFACE ---
 st.markdown('<div class="main-box">', unsafe_allow_html=True)
-
 st.title("DOWNLOADEY")
-st.write("Fast Downloader for IG, FB, and YouTube")
+inject_ads()
 
-inject_ads() # Top Ad
-
-url = st.text_input("", placeholder="PASTE LINK HERE...")
-choice = st.radio("CHOOSE FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=True)
+url = st.text_input("", placeholder="Paste Link (IG, FB, YT)...")
+choice = st.radio("FORMAT", ["MP4 (VIDEO)", "MP3 (AUDIO)"], horizontal=True)
 
 if st.button("DOWNLOAD NOW"):
     if url:
-        st.info("💰 AD: Download starting... (Please wait)")
         try:
-            # ydl_opts using current directory to avoid server permission errors
+            # ADVANCED STEALTH OPTIONS FOR 403 ERRORS
             ydl_opts = {
                 'outtmpl': '%(title)s.%(ext)s',
+                'cookiefile': 'cookies.txt',
                 'quiet': True,
                 'no_warnings': True,
+                # This makes the server mimic a real browser perfectly
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-us,en;q=0.5',
+                    'Sec-Fetch-Mode': 'navigate',
+                },
+                'nocheckcertificate': True,
             }
 
             if "MP3" in choice:
@@ -104,31 +66,24 @@ if st.button("DOWNLOAD NOW"):
                     }],
                 })
             else:
-                ydl_opts['format'] = 'best'
+                # Force a format that doesn't require complex merging to avoid 403s
+                ydl_opts['format'] = 'best[ext=mp4]/best'
 
-            with st.spinner('⚡ PROCESSING MEDIA...'):
+            with st.spinner('🚀 Cracking security... Please wait.'):
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    # Extraction
                     info = ydl.extract_info(url, download=True)
                     filename = ydl.prepare_filename(info)
-                    
                     if "MP3" in choice:
                         filename = os.path.splitext(filename)[0] + ".mp3"
 
                 with open(filename, "rb") as f:
-                    st.success("✅ READY!")
-                    st.download_button(
-                        label="🔥 CLICK TO SAVE TO DEVICE",
-                        data=f,
-                        file_name=os.path.basename(filename),
-                        mime="video/mp4" if "MP4" in choice else "audio/mpeg"
-                    )
-            inject_ads() # Post-Download Ad
+                    st.success("CLEARED! DOWNLOAD READY.")
+                    st.download_button(label="⬇️ SAVE FILE", data=f, file_name=os.path.basename(filename))
+                os.remove(filename)
 
         except Exception as e:
-            # Showing actual error to debug "Private/Invalid" issue
-            st.error(f"SYSTEM ERROR: {e}")
+            st.error(f"SYSTEM ERROR: {str(e)[:250]}")
     else:
-        st.warning("PLEASE PASTE A URL FIRST")
+        st.warning("Please paste a URL")
 
 st.markdown('</div>', unsafe_allow_html=True)
